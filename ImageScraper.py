@@ -1,11 +1,15 @@
-import hashlib
+# Purpose: A script I wrote to try and scrape the web for images of
+# oyster mushrooms.
+# @author: Dominic Sobocinski
 
+import hashlib
 from selenium import webdriver
 import os
 import time
 from PIL import Image
 import io
 import requests
+
 
 def fetch_image_urls(query: str, max_links_to_fetch: int, wd: webdriver, sleep_between_interactions: int = 1):
     def scroll_to_end(wd):
@@ -62,6 +66,7 @@ def fetch_image_urls(query: str, max_links_to_fetch: int, wd: webdriver, sleep_b
         results_start = len(thumbnail_results)
 
     return image_urls
+
 
 def persist_image(folder_path:str,url:str):
     try:

@@ -1,3 +1,7 @@
+# Purpose: takes in the directory of the data and creates a
+# data set class that can be used to retrieve images from
+# @author: Dominic Sobocinski
+
 import os
 import numpy as np
 from skimage import io
@@ -17,7 +21,6 @@ class OysterMushroom(Dataset):
         self.data = []
         self.cache = use_cache
         self.img_size = img_size
-
 
         if self.cache:
             for i, dir in enumerate(img_dir):
@@ -46,6 +49,9 @@ class OysterMushroom(Dataset):
             image = np.transpose(image, (2, 0, 1))
         return image, label
 
+
+# when this program is ran as main, it basically selects a random image
+# from the dataset and shows how it will look like for training the model
 if __name__ == "__main__":
 
     mush_dir = "images/oyster/"
@@ -57,6 +63,7 @@ if __name__ == "__main__":
         img_labels.append(1)
         img_dir.append(mush_dir + file)
 
+    # list of augmentations that we would apply to the images for training
     transformations = transforms.Compose([
         transforms.ToTensor(),
         transforms.GaussianBlur(kernel_size = (5, 9), sigma = (0.1, 5)),
@@ -69,6 +76,7 @@ if __name__ == "__main__":
 
     import random
 
+    # randomly select an image to visualize itS
     for i in range(0, len(dataset)):
         image = np.array(dataset[random.randint(0, len(dataset))][0])
         image = np.transpose(image, (1, 2, 0))

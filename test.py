@@ -1,3 +1,6 @@
+# Purpose: Test the saved model and show AUC ROC curve and percentage accuracy
+# @author: Dominic Sobocinski
+
 import torch
 from torchvision import models
 from skimage import io
@@ -6,7 +9,9 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 import shutil
 
-
+# check to see what files were used for validation
+# this is what we will use for testing the accuracy of the model since
+# this data was not used to train the model
 f = open("val_files.txt")
 img_dir = []
 #load in image labels
@@ -20,12 +25,13 @@ for file in f:
         labels.append(1)
 f.close()
 
+# validate on gpu if we can
 if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
 
-dict = torch.load("Oyster_classifier.pth")
+dict = torch.load("Oyster_classifier.pth")  # load the model
 model = models.resnet50()
 model.fc = torch.nn.Linear(model.fc.in_features, 2)
 model.load_state_dict(dict['model'])
@@ -34,9 +40,11 @@ model.eval()
 
 results = []
 
+# prepare the images to send them through the model
 prep = T.Compose([T.ToTensor(),
                   T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
+# go through each image
 for dir in img_dir:
     image = io.imread(dir.rstrip('\n'))
     image = prep(image)

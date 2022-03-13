@@ -1,3 +1,6 @@
+# Purpose: training loop for training the classifier.
+# @author: Dominic Sobocinski
+
 from Dataset import OysterMushroom
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
@@ -21,7 +24,7 @@ for file in os.listdir(mush_dir):
     img_labels.append(1)
     img_dir.append(mush_dir + file)
 
-# add non oyster mushrooms and empty images to data
+# add non-oyster mushrooms and empty images to data
 for file in os.listdir(non_mush_dir):
     img_labels.append(0)
     img_dir.append(non_mush_dir + file)
@@ -30,6 +33,7 @@ random_seed = 42  # random seed
 
 train_size = 0.8  # split dataset into training set and validation set
 
+# split the data and labels into a test and train set
 train_dir, test_dir = train_test_split(
     img_dir,
     random_state=random_seed,
@@ -47,6 +51,7 @@ out = open("test_files.txt", "w")
 for file in test_dir:
     out.write(file + '\n')
 
+# create a list of augmentations to apply to images while training
 transformations = transforms.Compose([transforms.ToTensor(),
                                      transforms.GaussianBlur(kernel_size = (5, 9), sigma=(0.1, 5)),
                                      transforms.RandomRotation(degrees = (0, 12)),
@@ -63,7 +68,7 @@ dataloader_test = DataLoader(dataset=test_data, batch_size = 16, shuffle = True)
 
 
 # initialize model and hyper parameters
-# just going to use pre-trained MobileNet v2
+# just going to use pre-trained resnet50
 # use cuda if we can
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -73,29 +78,35 @@ else:
 model = models.resnet50(pretrained = True)
 for param in model.parameters():
     param.requires_grad = False
+
+# Unfreeze the final layers so we can train the classifier
 model.fc = torch.nn.Linear(model.fc.in_features, 2)
-model.to(device)
+model.to(device) # send to cpu or gpu
+
 loss_fn = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(),  lr = 0.00001)
 lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.995)
 
 epochs = 1000
 epoch = 0
-# train the model
+# train the model for number of epochs
 for epoch in range(epochs):
     avg_loss = 0
     print("\nepoch", epoch, ": train")
-    model.train()
+    model.train()  # set model to train mode
+
+    # go through each batch in batch loader and send through model
     for batch, loader in enumerate(dataloader_train):
         data = loader[0].to(device)
         target = loader[1].to(device)
 
-        out = model(data)
-        loss = loss_fn(out, target)
-        loss.backward()
+        out = model(data) # send through the model
+        loss = loss_fn(out, target)  # get loss from model output
+        loss.backward()  # back propagate
         avg_loss = avg_loss + loss.item()
         optimizer.step()
 
+    # send data to tensorboard so we can graph training progression
     writer.add_scalar('Loss/train', avg_loss / len(dataloader_train), epoch)
     print(epoch, "/", epochs, "loss:", avg_loss / len(dataloader_train))
 
@@ -104,7 +115,7 @@ for epoch in range(epochs):
 
     # validate
     print("epoch", epoch, ": validation")
-    model.eval()
+    model.eval()    # evaluation mode
     avg_loss = 0
     for batch, loader in enumerate(dataloader_test):
 
@@ -116,9 +127,11 @@ for epoch in range(epochs):
 
     #lr_scheduler.step(avg_loss / len(dataloader_test))
 
+    # send data to tensorboard so we can visualize validation loss curve
     writer.add_scalar('Loss/test', avg_loss / len(dataloader_test), epoch)
     print(epoch, "/", epochs, "loss:", avg_loss/ len(dataloader_test))
 
+    # save model every 5 epochs in case something happens to run
     if ( epoch % 5 == 0):
         torch.save({
                     'epoch': epoch,

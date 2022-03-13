@@ -1,3 +1,7 @@
+# Purpose: Basically downsamples the images and saves them into 256 x 256 images
+# ends up saving us time during the training process
+# @author: Dominic Sobocinski
+
 from skimage import io
 from skimage import transform as trans
 import os
@@ -22,6 +26,7 @@ dir = []
 for file in os.listdir(oysters):
     dir.append(oysters + file)
 
+# create a pool so we can multithread process
 pool = P()
 pool.map(oysters_downsize, dir)
 pool.close()
